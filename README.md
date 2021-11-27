@@ -33,7 +33,7 @@ print(dic['b'])
 
 ## benchmark
 
-see logs in [benchmark.md](./benchmark.md) or
+see logs in [benchmark.md](./benchmark.log) or
 
 ```shell
 git clone https://github.com/sailist/dbrecord
