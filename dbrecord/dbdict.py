@@ -1,3 +1,4 @@
+import json
 import time
 from contextlib import contextmanager
 import sqlite3
@@ -77,7 +78,12 @@ class PDict():
             self._disk_store(hash_key, dump_key, dump_value)
 
     def __getitem__(self, key):
-        return self.get(key)
+        if isinstance(key, str):
+            return self.get(key)
+        elif isinstance(key, (tuple, list)):
+            return self.gets(*key)
+        else:
+            raise NotImplementedError()
 
     def __contains__(self, key):
         res = self.get(key, ContainsWrap())
@@ -143,8 +149,28 @@ class PDict():
                 value = None
         return value
 
+    def _disk_gets(self, hash_key, dump_key):
+        hash_key_ = self._construct_tuple(*hash_key)
+        dump_key_ = self._construct_tuple(*dump_key)
+
+        sql = f'select key, value from DICT where inthash in {hash_key_} and key in {dump_key_}'
+        res = self.conn.execute(sql).fetchall()
+
+        def _loads(val):
+            if isinstance(val, NoneWrap):
+                return None
+            return pickle.loads(val)
+
+        res = {key: _loads(value) for key, value in res}
+
+        values = []
+        for key in dump_key:
+            values.append(res.get(key, none))
+
+        return values
+
     def _construct_tuple(self, *dump_keys):
-        pass
+        return json.dumps(dump_keys).replace('[', '(').replace(']', ')')
 
     def flush(self):
         if len(self.cache) == 0:
@@ -159,12 +185,36 @@ class PDict():
         yield
         self.flush()
 
-    def gets(self, *keys):
-        pass
+    def gets(self, *keys: str):
+        """
+        :param keys:
+        :return: return a list which has the same elements as keys
+            if key exists in dict, the corrsponding elements will be its value,
+            else, will be an instance of class dbrecord.dbdict.NoneType
+
+        """
+        self.flush()
+        values = [NoneType() for _ in range(len(keys))]
+        chunk_keys = [self._get_dump_key_value_in_sql(key) for key in keys]
+        if self.apply_memory:
+            for i, key in enumerate(keys):
+                hash_key, dump_key, _ = chunk_keys[i]
+                values[i] = self._memory_get(dump_key)
+        if self.apply_disk:
+            none_ids = [i for i, value in enumerate(values) if isinstance(value, NoneType)]
+            hash_keys = [chunk_keys[i][0] for i in none_ids]
+            dump_keys = [chunk_keys[i][1] for i in none_ids]
+            disk_values = self._disk_gets(hash_keys, dump_keys)
+            for i, disk_value in enumerate(disk_values):
+                reid = none_ids[i]
+                values[reid] = disk_value
+
+        values = [i for i in values]
+        return values
 
     def get(self, key, default: Any = none):
         self.flush()
-        hash_key, dump_key, dump_value = self._get_dump_key_value_in_sql(key)
+        hash_key, dump_key, _ = self._get_dump_key_value_in_sql(key)
         if self.apply_memory:
             value = self._memory_get(dump_key)
             if not isinstance(value, NoneType):
