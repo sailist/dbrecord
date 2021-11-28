@@ -1,17 +1,13 @@
-import json
-import time
-from contextlib import contextmanager
-import sqlite3
-from joblib import hash
-import pickle
-from typing import Any
-from collections import OrderedDict
-
 import os
+import pickle
+import sqlite3
+import time
+from collections import OrderedDict
+from typing import Any
 
-
-def inthash(item):
-    return int(hash(item)[:8], 16)
+from utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
+from .idtrans import BatchIDSTrans
+from .utils import construct_tuple
 
 
 def create_database(database):
@@ -30,27 +26,12 @@ def create_database(database):
     return conn
 
 
-class ContainsWrap():
-    pass
-
-
-class NoneType():
-    pass
-
-
-class NoneWrap():
-    pass
-
-
-none = NoneType()
-
-
 class PDict():
-    def __init__(self, database,
-                 memory_size=100000,
-                 apply_memory=False,
-                 apply_disk=True,
-                 cache_size=10000, cache_time=-1, verbose=0):
+    def __init__(self,
+                 database,
+                 apply_memory=False, memory_size=100000,
+                 apply_disk=True, cache_size=10000, cache_time=-1,
+                 verbose=0):
         assert cache_size > 0 or cache_time > 0
         assert apply_memory or apply_disk
         self.apply_memory = apply_memory
@@ -61,13 +42,13 @@ class PDict():
             self.conn = create_database(database)
             self.cache_size = cache_size
             self.cache_time = cache_time
-            self.last_flush_time = time.time()
             self.cache = []
         if apply_memory:
             self.memory = OrderedDict()
-            self.memory_size = memory_size
+            self.memory_size = memory_size if self.apply_disk else -1
             self.queue = list()
 
+        self.last_flush_time = time.time()
         self.verbose = verbose
 
     def __setitem__(self, key, value):
@@ -92,10 +73,24 @@ class PDict():
     def __len__(self):
         from dbrecord.summary import count_table
         self.flush()
-        return count_table(self.conn, 'DICT')
+        if self.apply_disk:
+            return count_table(self.conn, 'DICT')
+        else:
+            return len(self.memory)
 
     def __iter__(self):
-        pass
+        yield from self.keys()
+
+    def execute(self, sql):
+        try:
+            return self.conn.execute(sql)
+        except sqlite3.DatabaseError:
+            self.reconnect()
+            self.execute(sql)
+
+    def reconnect(self):
+        self.conn.close()
+        self.conn = create_database(self.database)
 
     def _get_dump_key_value_in_sql(self, key, value=none):
         assert isinstance(key, str), f'key must be string type, got {type(key)}'
@@ -114,7 +109,7 @@ class PDict():
             return
         self.memory[dump_key] = value
         self.queue.append(dump_key)
-        if len(self.queue) > self.memory_size:
+        if len(self.queue) > self.memory_size and self.memory_size > 0:
             key = self.queue.pop(0)
             self.memory.pop(key)
 
@@ -135,7 +130,7 @@ class PDict():
 
     def _disk_get(self, hash_key, dump_key):
         sql = f'select value from DICT where inthash = {hash_key} and key = "{dump_key}"'
-        res = self.conn.execute(sql).fetchall()
+        res = self.execute(sql).fetchall()
         if len(res) > 0:
             res = res[-1]
         else:
@@ -150,11 +145,12 @@ class PDict():
         return value
 
     def _disk_gets(self, hash_key, dump_key):
-        hash_key_ = self._construct_tuple(*hash_key)
-        dump_key_ = self._construct_tuple(*dump_key)
+        hash_key_ = construct_tuple(*hash_key)
+        dump_key_ = construct_tuple(*dump_key)
 
         sql = f'select key, value from DICT where inthash in {hash_key_} and key in {dump_key_}'
-        res = self.conn.execute(sql).fetchall()
+
+        res = self.execute(sql).fetchall()
 
         def _loads(val):
             if isinstance(val, NoneWrap):
@@ -169,21 +165,20 @@ class PDict():
 
         return values
 
-    def _construct_tuple(self, *dump_keys):
-        return json.dumps(dump_keys).replace('[', '(').replace(']', ')')
-
     def flush(self):
+        if not self.apply_disk:
+            return
         if len(self.cache) == 0:
             return
         sql = f'insert into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
-        self.conn.executemany(sql, self.cache)
-        self.conn.commit()
-        self.cache.clear()
-
-    @contextmanager
-    def immediately(self):
-        yield
-        self.flush()
+        try:
+            self.conn.executemany(sql, self.cache)
+            self.conn.commit()
+            self.cache.clear()
+            self.last_flush_time = time.time()
+        except sqlite3.DatabaseError:
+            self.reconnect()
+            self.flush()
 
     def gets(self, *keys: str):
         """
@@ -233,29 +228,64 @@ class PDict():
         raise KeyError(key)
 
     def keys(self):
-        pass
+        if self.apply_disk:
+            self.flush()
+            cursor = self.execute('select key from DICT')
+            res = cursor.fetchmany(500)
+            while len(res) > 0:
+                for key, in res:
+                    yield key
+                res = cursor.fetchmany(500)
+        else:
+            return self.memory.keys()
 
     def values(self):
-        pass
+        if self.apply_disk:
+            self.flush()
+            cursor = self.execute('select value from DICT')
+            res = cursor.fetchmany(500)
+            while len(res) > 0:
+                for value, in res:
+                    yield pickle.loads(value)
+                res = cursor.fetchmany(500)
+        else:
+            return self.memory.values()
+
+    def items(self):
+        if self.apply_disk:
+            self.flush()
+            cursor = self.execute('select key, value from DICT')
+            res = cursor.fetchmany(500)
+            while len(res) > 0:
+                for key, value in res:
+                    yield key, pickle.loads(value)
+                res = cursor.fetchmany(500)
+        else:
+            return self.memory.items()
 
     def update(self, E, **F):
         raise NotImplementedError()
 
     def clear(self):
-        self.conn.close()
-        os.remove(self.database)
-        self.memory.clear()
-        self.queue.clear()
-        raise NotImplementedError()
+        if self.apply_disk:
+            self.conn.close()
+            os.remove(self.database)
+        if self.apply_memory:
+            self.memory.clear()
+            self.queue.clear()
 
     def setdefault(self, k, value):
-        pass
+        res = self.get(k, contrain)
+        if isinstance(res, ContainsWrap):
+            self[k] = value
+            return value
+        return res
 
     def print(self, *info, verbose=1):
         print(*info)
 
     def to_list(self):
-        from dbrecord.idtrans import BatchIDSTrans
+        assert self.apply_disk
         self.flush()
-        plist = BatchIDSTrans(self.database, 'DICT', ['id', 'inthash', 'key', 'value'])
+        plist = BatchIDSTrans(self.database)
         return plist
