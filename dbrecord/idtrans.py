@@ -1,17 +1,14 @@
+import pickle
 import sqlite3
-from .summary import check_db_table_ok
+
+from .utils import construct_tuple
 
 
 class IDTrans:
-    def __init__(self, db_file, table_name, columns):
-        opcode, msg = check_db_table_ok(db_file, table_name, columns)
-        assert opcode, msg
-
+    def __init__(self, db_file):
         self._conn = None
         self._db = None
         self.db_file = db_file
-        self.table_name = table_name
-        self.columns = columns
 
     @property
     def conn(self):
@@ -29,29 +26,60 @@ class IDTrans:
         self._conn = None
         self._db = None
 
-
-class BatchIDSTrans(IDTrans):
-    def __call__(self, ids, db_file=None):
-        if db_file is not None:
-            self.db_file = db_file
-            self.reconn()
-
+    def raw_gets(self,ids):
         if isinstance(ids, int):
             ids = [ids]
-        ids_ = ','.join([str(int(i)) for i in ids])
+        ids_ = construct_tuple(*ids)
 
-        col = ', '.join(self.columns)
-        sql = f'select {col} from {self.table_name} where id in ({ids_})'
+        sql = f'select key,value from DICT where id in {ids_}'
 
         try:
             res = self.db.execute(sql)
-        except sqlite3.DatabaseError as e:
+        except sqlite3.DatabaseError:
             self.reconn()
             return self(ids)
 
-        col = [i[0].lower() for i in res.description]
+        ress = res.fetchall()
+        return ress
+    def gets(self, ids):
+        if isinstance(ids, int):
+            ids = [ids]
+        ids_ = construct_tuple(*ids)
+
+        sql = f'select key,value from DICT where id in {ids_}'
+
+        try:
+            res = self.db.execute(sql)
+        except sqlite3.DatabaseError:
+            self.reconn()
+            return self(ids)
+
         ress = res.fetchall()
 
-        mem = {k: list(v) for k, v in zip(col, zip(*ress))}
+        ress = [{key: pickle.loads(value)} for key, value in ress]
 
-        return mem
+        return ress
+
+    def __getitem__(self, item):
+        return self.gets(item)
+
+
+class BatchIDSTrans(IDTrans):
+    def __call__(self, ids):
+        if isinstance(ids, int):
+            ids = [ids]
+        ids_ = construct_tuple(*ids)
+
+        sql = f'select key,value from DICT where id in {ids_}'
+
+        try:
+            res = self.db.execute(sql)
+        except sqlite3.DatabaseError:
+            self.reconn()
+            return self(ids)
+
+        ress = res.fetchall()
+
+        ress = [{key: pickle.loads(value)} for key, value in ress]
+
+        return ress
