@@ -5,7 +5,7 @@ import time
 from collections import OrderedDict
 from typing import Any
 
-from utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
+from .utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
 from .idtrans import BatchIDSTrans
 from .utils import construct_tuple
 
