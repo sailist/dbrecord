@@ -205,6 +205,9 @@ class PDict():
             self.reconnect()
             self.flush()
 
+    def close(self):
+        self.conn.close()
+
     def gets(self, *keys: str):
         """
         :param keys:

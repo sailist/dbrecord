@@ -16,8 +16,12 @@ class PList:
         self._db = None
         self.db_file = db_file
 
+    def __getstate__(self):
+        return {'db_file': self.db_file, '_db': None, '_conn': None}
+
     def __len__(self):
         from dbrecord.summary import count_table
+        self.reconn()
         return count_table(self.conn, 'DICT')
 
     @property
@@ -33,12 +37,14 @@ class PList:
         return self._db
 
     def reconn(self):
+        print('reconnect...')
         self._conn = None
         self._db = None
 
     def raw_gets(self, ids):
         if isinstance(ids, int):
             ids = [ids]
+        ids = [i + 1 for i in ids]
         ids_ = construct_tuple(*ids)
 
         sql = f'select key,value from DICT where id in {ids_}'
@@ -46,7 +52,7 @@ class PList:
         try:
             res = self.db.execute(sql)
             ress = res.fetchall()
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as e:
             self.reconn()
             return self.raw_gets(ids)
 
