@@ -11,7 +11,7 @@ if __name__ == '__main__':
     dic.flush()
 
     ids = PList('temp1.sqlite')
-
+    print(len(ids))
     plist = dic.to_list()
     print(ids[range(10)])
     os.remove('temp1.sqlite')

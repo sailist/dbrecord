@@ -39,7 +39,7 @@ class PDict():
 
         if apply_disk:
             self.database = database
-            self.conn = create_database(database)
+            self._conn = None
             self.cache_size = cache_size
             self.cache_time = cache_time
             self.cache = []
@@ -81,16 +81,23 @@ class PDict():
     def __iter__(self):
         yield from self.keys()
 
+    @property
+    def conn(self):
+        if self._conn is None:
+            self._conn = sqlite3.connect(self.database)
+        return self._conn
+
     def execute(self, sql):
         try:
             return self.conn.execute(sql)
         except sqlite3.DatabaseError:
             self.reconnect()
-            self.execute(sql)
+            return self.execute(sql)
 
     def reconnect(self):
-        self.conn.close()
-        self.conn = create_database(self.database)
+        if self._conn is not None:
+            self._conn.close()
+        self._conn = create_database(self.database)
 
     def _get_dump_key_value_in_sql(self, key, value=none):
         assert isinstance(key, str), f'key must be string type, got {type(key)}'

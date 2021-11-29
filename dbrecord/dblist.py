@@ -10,6 +10,10 @@ class PList:
         self._db = None
         self.db_file = db_file
 
+    def __len__(self):
+        from dbrecord.summary import count_table
+        return count_table(self.conn, 'DICT')
+
     @property
     def conn(self):
         if self._conn is None:

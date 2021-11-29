@@ -8,6 +8,7 @@ install from github
 
 ```
 pip install git+https://github.com/sailist/dbrecord
+pip install git+https://github.com/sailist/dbrecord --user
 ```
 
 ## how to use
