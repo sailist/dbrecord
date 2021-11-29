@@ -1,7 +1,6 @@
 import os
 
-from dbrecord import PDict
-from dbrecord.idtrans import BatchIDSTrans
+from dbrecord import PDict, PList
 
 if __name__ == '__main__':
     dic = PDict('temp1.sqlite')
@@ -11,8 +10,8 @@ if __name__ == '__main__':
     print(dic.setdefault('3', 3))
     dic.flush()
 
-    ids = BatchIDSTrans('temp1.sqlite')
+    ids = PList('temp1.sqlite')
 
     plist = dic.to_list()
-    print(ids(range(10)))
+    print(ids[range(10)])
     os.remove('temp1.sqlite')

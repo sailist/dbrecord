@@ -1,6 +1,6 @@
+import os
 import pprint
 import sqlite3
-import os
 from typing import Union, List
 
 

@@ -5,8 +5,8 @@ import time
 from collections import OrderedDict
 from typing import Any
 
+from .dblist import PList
 from .utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
-from .idtrans import BatchIDSTrans
 from .utils import construct_tuple
 
 
@@ -287,5 +287,5 @@ class PDict():
     def to_list(self):
         assert self.apply_disk
         self.flush()
-        plist = BatchIDSTrans(self.database)
+        plist = PList(self.database)
         return plist
