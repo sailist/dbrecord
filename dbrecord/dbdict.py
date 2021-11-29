@@ -172,6 +172,24 @@ class PDict():
 
         return values
 
+    def _fetchall(self, sql):
+        try:
+            return self.conn.execute(sql).fetchall()
+        except sqlite3.DatabaseError:
+            self.reconnect()
+            return self._fetchall(sql)
+
+    def _fetchmany(self, sql, chunksize):
+        try:
+            cursor = self.conn.execute(sql)
+            res = cursor.fetchmany(chunksize)
+            while len(res) > 0:
+                yield res
+                res = cursor.fetchmany(chunksize)
+        except sqlite3.DatabaseError:
+            self.reconnect()
+            yield from self._fetchmany(sql, chunksize)
+
     def flush(self):
         if not self.apply_disk:
             return

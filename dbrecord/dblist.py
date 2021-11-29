@@ -39,11 +39,11 @@ class PList:
 
         try:
             res = self.db.execute(sql)
+            ress = res.fetchall()
         except sqlite3.DatabaseError:
             self.reconn()
             return self.raw_gets(ids)
 
-        ress = res.fetchall()
         ress = [(key, pickle.loads(value)) for key, value in ress]
         return ress
 
