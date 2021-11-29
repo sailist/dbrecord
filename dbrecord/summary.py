@@ -114,7 +114,7 @@ def count_table(conn, table):
     right = None
 
     while right is None:
-        res = conn.execute(f'select * from {table} where id == {idx}').fetchone()
+        res = conn.execute(f'select id from {table} where id == {idx}').fetchone()
         if res is not None:
             idx *= 2
         else:
@@ -123,7 +123,7 @@ def count_table(conn, table):
     right = idx
 
     while right - left != 1:
-        res = conn.execute(f'select * from {table} where id == {idx}').fetchone()
+        res = conn.execute(f'select id from {table} where id == {idx}').fetchone()
         if res is not None:
             left = idx
             nxt = (idx + right) // 2
