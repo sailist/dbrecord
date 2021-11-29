@@ -137,7 +137,7 @@ class PDict():
 
     def _disk_get(self, hash_key, dump_key):
         sql = f'select value from DICT where inthash = {hash_key} and key = "{dump_key}"'
-        res = self.execute(sql).fetchall()
+        res = self._fetchall(sql)
         if len(res) > 0:
             res = res[-1]
         else:
@@ -157,7 +157,7 @@ class PDict():
 
         sql = f'select key, value from DICT where inthash in {hash_key_} and key in {dump_key_}'
 
-        res = self.execute(sql).fetchall()
+        res = self._fetchall(sql)
 
         def _loads(val):
             if isinstance(val, NoneWrap):
@@ -255,26 +255,20 @@ class PDict():
     def keys(self):
         if self.apply_disk:
             self.flush()
-            cursor = self.execute('select key from DICT')
-            res = cursor.fetchmany(500)
-            while len(res) > 0:
+            for res in self._fetchmany('select key from DICT', 500):
                 for key, in res:
                     yield key
-                res = cursor.fetchmany(500)
         else:
-            return self.memory.keys()
+            yield from self.memory.keys()
 
     def values(self):
         if self.apply_disk:
             self.flush()
-            cursor = self.execute('select value from DICT')
-            res = cursor.fetchmany(500)
-            while len(res) > 0:
+            for res in self._fetchmany('select value from DICT', 500):
                 for value, in res:
                     yield pickle.loads(value)
-                res = cursor.fetchmany(500)
         else:
-            return self.memory.values()
+            yield from self.memory.values()
 
     def items(self):
         if self.apply_disk:

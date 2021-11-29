@@ -22,8 +22,8 @@ def test_plist():
     dic['a'] = 1
     dic['b'] = None
     plist = dic.to_list()
-    assert len(plist(range(10))) == 2
-    assert plist(range(10)) == [{'a': 1}, {'b': None}]
+    assert len(plist[range(10)]) == 2
+    assert plist[range(10)] == [('a', 1), ('b', None)]
     dic.flush()
     os.remove('./disk.sqlite')
 

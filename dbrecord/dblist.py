@@ -1,7 +1,13 @@
 import pickle
 import sqlite3
 
-from .utils import construct_tuple
+from .utils import construct_tuple, NoneWrap
+
+
+def de_nonewrap(value):
+    if isinstance(value, NoneWrap):
+        return None
+    return value
 
 
 class PList:
@@ -44,10 +50,10 @@ class PList:
             self.reconn()
             return self.raw_gets(ids)
 
-        ress = [(key, pickle.loads(value)) for key, value in ress]
+        ress = [(key, de_nonewrap(pickle.loads(value))) for key, value in ress]
         return ress
 
-    def gets(self, ids, return_type='dict'):
+    def gets(self, ids, return_type='raw'):
         ress = self.raw_gets(ids)
 
         if return_type in {'pandas', 'pd'}:
