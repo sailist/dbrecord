@@ -12,7 +12,7 @@ pip install dist/$(python3 install.py) --user
 
 setup(
     name='dbrecord',
-    version='0.1.7',
+    version='0.1.8',
     description='torch kit for programing your dl experiments code elegant.',
     url='https://github.com/sailist/dbrecord',
     author='sailist',
