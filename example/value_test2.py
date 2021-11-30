@@ -9,7 +9,5 @@ if __name__ == '__main__':
     dic = PDict('temp1.sqlite')
     dic['a'] = 1
     print(dic['a', 'b'])
-    dic.gets()
-    # plist = dic.to_list()
-    # print(plist(1))
+    print(dic['a'])
     os.remove('temp1.sqlite')

@@ -10,7 +10,7 @@ from .utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
 from .utils import construct_tuple
 
 
-def create_database(database):
+def create_database(database: str):
     conn = sqlite3.connect(database)
     sql = f'''CREATE TABLE DICT
                        (ID INTEGER PRIMARY KEY  AUTOINCREMENT,
