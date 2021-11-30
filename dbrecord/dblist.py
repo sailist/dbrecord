@@ -24,7 +24,7 @@ class PList:
 
     def __len__(self):
         from dbrecord.summary import count_table
-        self.reconn()
+        self.reconnect()
         return count_table(self.conn, 'DICT')
 
     @property
@@ -33,7 +33,9 @@ class PList:
             self._conn = sqlite3.connect(self.db_file)
         return self._conn
 
-    def reconn(self):
+    def reconnect(self):
+        if self._conn is not None:
+            self._conn.close()
         self._conn = None
 
     def raw_gets(self, ids):
@@ -48,7 +50,7 @@ class PList:
             res = self.conn.execute(sql)
             ress = res.fetchall()
         except sqlite3.DatabaseError as e:
-            self.reconn()
+            self.reconnect()
             return self.raw_gets(ids)
 
         ress = [(key, de_nonewrap(pickle.loads(value))) for key, value in ress]

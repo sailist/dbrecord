@@ -26,7 +26,7 @@ def create_database(database):
     return conn
 
 
-class PDict():
+class PDict:
     def __init__(self,
                  database,
                  apply_memory=False, memory_size=100000,
@@ -85,24 +85,6 @@ class PDict():
 
     def __iter__(self):
         yield from self.keys()
-
-    @property
-    def conn(self):
-        if self._conn is None:
-            self._conn = sqlite3.connect(self.database)
-        return self._conn
-
-    def execute(self, sql):
-        try:
-            return self.conn.execute(sql)
-        except sqlite3.DatabaseError:
-            self.reconnect()
-            return self.execute(sql)
-
-    def reconnect(self):
-        if self._conn is not None:
-            self._conn.close()
-        self._conn = create_database(self.database)
 
     def _get_dump_key_value_in_sql(self, key, value=none):
         assert isinstance(key, str), f'key must be string type, got {type(key)}'
@@ -195,6 +177,24 @@ class PDict():
             self.reconnect()
             yield from self._fetchmany(sql, chunksize)
 
+    @property
+    def conn(self):
+        if self._conn is None:
+            self._conn = create_database(self.database)
+        return self._conn
+
+    def execute(self, sql):
+        try:
+            return self.conn.execute(sql)
+        except sqlite3.DatabaseError:
+            self.reconnect()
+            return self.execute(sql)
+
+    def reconnect(self):
+        if self._conn is not None:
+            self._conn.close()
+        self._conn = None
+
     def flush(self):
         if not self.apply_disk:
             return
@@ -214,6 +214,7 @@ class PDict():
         if self.apply_disk:
             self.flush()
             self.conn.close()
+            self._conn = None
 
     def gets(self, *keys: str):
         """
@@ -309,9 +310,6 @@ class PDict():
             self[k] = value
             return value
         return res
-
-    def print(self, *info, verbose=1):
-        print(*info)
 
     def to_list(self):
         assert self.apply_disk

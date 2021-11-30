@@ -3,6 +3,12 @@
 sqlite based kv database using for big data
 
 ## install
+install by pipy
+
+```shell
+pip install dbrecord
+```
+
 
 install from github
 
@@ -50,5 +56,11 @@ python speed_test.py
 # TODO
 
  - [ ] other dict methods like `update`, `clear`
- - [ ] dataset operations
+ - [x] dataset operations
  - [ ] document
+
+# See also
+
+
+ - [lumo](https://github.com/pytorch-lumo/lumo)
+ - [pytorch.DataLoader](https://github.com/pytorch-lumo/pytorch.DataLoader)
