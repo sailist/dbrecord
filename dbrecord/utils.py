@@ -7,15 +7,15 @@ def construct_tuple(*values):
     return json.dumps(values).replace('[', '(').replace(']', ')')
 
 
-class ContainsWrap():
+class ContainsWrap:
     pass
 
 
-class NoneType():
+class NoneType:
     pass
 
 
-class NoneWrap():
+class NoneWrap:
     pass
 
 

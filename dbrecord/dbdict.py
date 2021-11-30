@@ -51,6 +51,11 @@ class PDict():
         self.last_flush_time = time.time()
         self.verbose = verbose
 
+    def __getstate__(self):
+        state = self.__dict__
+        state['_conn'] = None
+        return state
+
     def __setitem__(self, key, value):
         hash_key, dump_key, dump_value = self._get_dump_key_value_in_sql(key, value)
         if self.apply_memory:
@@ -72,8 +77,8 @@ class PDict():
 
     def __len__(self):
         from dbrecord.summary import count_table
-        self.flush()
         if self.apply_disk:
+            self.flush()
             return count_table(self.conn, 'DICT')
         else:
             return len(self.memory)
@@ -206,7 +211,9 @@ class PDict():
             self.flush()
 
     def close(self):
-        self.conn.close()
+        if self.apply_disk:
+            self.flush()
+            self.conn.close()
 
     def gets(self, *keys: str):
         """

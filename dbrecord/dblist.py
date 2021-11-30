@@ -13,11 +13,14 @@ def de_nonewrap(value):
 class PList:
     def __init__(self, db_file):
         self._conn = None
-        self._db = None
         self.db_file = db_file
 
     def __getstate__(self):
-        return {'db_file': self.db_file, '_db': None, '_conn': None}
+        """Connetion object cannot be pickled, so we need to return None when __getstate__ be called. """
+        return {'db_file': self.db_file, '_conn': None}
+
+    def __getitem__(self, item):
+        return self.gets(item, 'raw')
 
     def __len__(self):
         from dbrecord.summary import count_table
@@ -30,16 +33,8 @@ class PList:
             self._conn = sqlite3.connect(self.db_file)
         return self._conn
 
-    @property
-    def db(self):
-        if self._db is None:
-            self._db = self.conn.cursor()
-        return self._db
-
     def reconn(self):
-        print('reconnect...')
         self._conn = None
-        self._db = None
 
     def raw_gets(self, ids):
         if isinstance(ids, int):
@@ -50,7 +45,7 @@ class PList:
         sql = f'select key,value from DICT where id in {ids_}'
 
         try:
-            res = self.db.execute(sql)
+            res = self.conn.execute(sql)
             ress = res.fetchall()
         except sqlite3.DatabaseError as e:
             self.reconn()
@@ -77,6 +72,3 @@ class PList:
             pass
 
         return ress
-
-    def __getitem__(self, item):
-        return self.gets(item, 'raw')
