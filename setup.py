@@ -12,9 +12,9 @@ pip install dist/$(python3 install.py) --user
 
 setup(
     name='dbrecord',
-    version='0.2.0',
-    description='torch kit for programing your dl experiments code elegant.',
-    url='https://github.com/sailist/dbrecord',
+    version='0.2.1',
+    description='sqlite based kv database using for big data IO.',
+    url='https://github.com/pytorch-lumo/dbrecord',
     author='sailist',
     author_email='sailist@outlook.com',
     license='Apache License 2.0',
