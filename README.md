@@ -7,7 +7,7 @@ sqlite based kv database using for big data
 install by pipy
 
 ```shell
-pip install dbrecord
+pip install dbrecord -U
 ```
 
 install from github
