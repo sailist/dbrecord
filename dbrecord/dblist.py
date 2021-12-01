@@ -20,7 +20,7 @@ class PList:
         return {'db_file': self.db_file, '_conn': None}
 
     def __getitem__(self, item):
-        return self.gets(item, 'raw')
+        return self.gets(item, 'value')
 
     def __len__(self):
         from dbrecord.summary import count_table
@@ -56,7 +56,7 @@ class PList:
         ress = [(key, de_nonewrap(pickle.loads(value))) for key, value in ress]
         return ress
 
-    def gets(self, ids, return_type='raw'):
+    def gets(self, ids, return_type='value'):
         ress = self.raw_gets(ids)
 
         if return_type in {'pandas', 'pd'}:
@@ -70,7 +70,9 @@ class PList:
             ress = [{key: value} for key, value in ress]
         elif return_type in {'dict'}:
             ress = {key: value for key, value in ress}
-        elif return_type in {'raw', 'list'}:
+        elif return_type in {'value'}:
+            ress = [value for _, value in ress]
+        elif return_type in {'raw'}:
             pass
 
         return ress
