@@ -3,10 +3,11 @@ import pickle
 import sqlite3
 import time
 from collections import OrderedDict
+from collections.abc import MutableMapping
 from typing import Any
 
 from .dblist import PList
-from .utils import ContainsWrap, NoneType, NoneWrap, none, contrain, inthash
+from .utils import ContainsWrap, NoneType, NoneWrap, none, contain, inthash, DelType
 from .utils import construct_tuple
 
 
@@ -26,26 +27,30 @@ def create_database(database: str):
     return conn
 
 
-class PDict:
+class PDict(MutableMapping):
+    """
+    dict object that
+    """
+
     def __init__(self,
                  database,
-                 apply_memory=False, memory_size=100000,
-                 apply_disk=True, cache_size=10000, cache_time=-1,
-                 verbose=0):
+                 apply_memory=False, memory_size: int = 100000,
+                 cache_size=10000, cache_time=-1,
+                 verbose=0, chunk_size=500):
         assert cache_size > 0 or cache_time > 0
-        assert apply_memory or apply_disk
         self.apply_memory = apply_memory
-        self.apply_disk = apply_disk
 
-        if apply_disk:
-            self.database = database
-            self._conn = None
-            self.cache_size = cache_size
-            self.cache_time = cache_time
-            self.cache = []
+        self.database = database
+        self._conn = None
+        self.cache_size = cache_size
+        self.cache_time = cache_time
+        self.cache = []
+        self._cache_len = None
+        self.chunk_size = chunk_size
         if apply_memory:
+            assert memory_size >= 0
             self.memory = OrderedDict()
-            self.memory_size = memory_size if self.apply_disk else -1
+            self.memory_size = memory_size
             self.queue = list()
 
         self.last_flush_time = time.time()
@@ -60,8 +65,7 @@ class PDict:
         hash_key, dump_key, dump_value = self._get_dump_key_value_in_sql(key, value)
         if self.apply_memory:
             self._memory_store(dump_key, value)
-        if self.apply_disk:
-            self._disk_store(hash_key, dump_key, dump_value)
+        self._disk_store(hash_key, dump_key, dump_value)
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -73,18 +77,23 @@ class PDict:
 
     def __contains__(self, key):
         res = self.get(key, ContainsWrap())
-        return not isinstance(res, ContainsWrap)
+        return not isinstance(res, (ContainsWrap))
 
     def __len__(self):
+        if len(self.cache) == 0 and self._cache_len is not None:
+            return self._cache_len
+        self.flush()
         from dbrecord.summary import count_table
-        if self.apply_disk:
-            self.flush()
-            return count_table(self.conn, 'DICT')
-        else:
-            return len(self.memory)
+        self._cache_len = count_table(self.conn, 'DICT')
+        return self._cache_len
 
     def __iter__(self):
         yield from self.keys()
+
+    def __delitem__(self, k) -> None:
+        self[k] = ContainsWrap()
+        if self.apply_memory:
+            self._memory_store(k, ContainsWrap())
 
     def _get_dump_key_value_in_sql(self, key, value=none):
         assert isinstance(key, str), f'key must be string type, got {type(key)}'
@@ -123,6 +132,7 @@ class PDict:
             self.flush()
 
     def _disk_get(self, hash_key, dump_key):
+        self.flush()
         sql = f'select value from DICT where inthash = {hash_key} and key = "{dump_key}"'
         res = self._fetchall(sql)
         if len(res) > 0:
@@ -139,6 +149,8 @@ class PDict:
         return value
 
     def _disk_gets(self, hash_key, dump_key):
+        self.flush()
+
         hash_key_ = construct_tuple(*hash_key)
         dump_key_ = construct_tuple(*dump_key)
 
@@ -147,9 +159,10 @@ class PDict:
         res = self._fetchall(sql)
 
         def _loads(val):
+            val = pickle.loads(val)
             if isinstance(val, NoneWrap):
                 return None
-            return pickle.loads(val)
+            return val
 
         res = {key: _loads(value) for key, value in res}
 
@@ -196,8 +209,6 @@ class PDict:
         self._conn = None
 
     def flush(self):
-        if not self.apply_disk:
-            return
         if len(self.cache) == 0:
             return
         sql = f'insert into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
@@ -211,10 +222,10 @@ class PDict:
             self.flush()
 
     def close(self):
-        if self.apply_disk:
-            self.flush()
-            self.conn.close()
-            self._conn = None
+        """close the connection"""
+        self.flush()
+        self.conn.close()
+        self._conn = None
 
     def gets(self, *keys: str):
         """
@@ -224,38 +235,38 @@ class PDict:
             else, will be an instance of class dbrecord.dbdict.NoneType
 
         """
-        self.flush()
         values = [NoneType() for _ in range(len(keys))]
         chunk_keys = [self._get_dump_key_value_in_sql(key) for key in keys]
         if self.apply_memory:
             for i, key in enumerate(keys):
                 hash_key, dump_key, _ = chunk_keys[i]
                 values[i] = self._memory_get(dump_key)
-        if self.apply_disk:
-            none_ids = [i for i, value in enumerate(values) if isinstance(value, NoneType)]
-            hash_keys = [chunk_keys[i][0] for i in none_ids]
-            dump_keys = [chunk_keys[i][1] for i in none_ids]
-            disk_values = self._disk_gets(hash_keys, dump_keys)
-            for i, disk_value in enumerate(disk_values):
-                reid = none_ids[i]
-                values[reid] = disk_value
+
+        none_ids = [i for i, value in enumerate(values) if isinstance(value, (NoneType, ContainsWrap))]
+        hash_keys = [chunk_keys[i][0] for i in none_ids]
+        dump_keys = [chunk_keys[i][1] for i in none_ids]
+        disk_values = self._disk_gets(hash_keys, dump_keys)
+        for i, disk_value in enumerate(disk_values):
+            if isinstance(disk_value, ContainsWrap):
+                continue
+            reid = none_ids[i]
+            values[reid] = disk_value
 
         values = [i for i in values]
         return values
 
     def get(self, key, default: Any = none):
-        self.flush()
         hash_key, dump_key, _ = self._get_dump_key_value_in_sql(key)
         if self.apply_memory:
             value = self._memory_get(dump_key)
-            if not isinstance(value, NoneType):
+            if not isinstance(value, (NoneType, ContainsWrap)):
                 return value
-        if self.apply_disk:
-            value = self._disk_get(hash_key, dump_key)
-            if not isinstance(value, NoneType):
-                if self.apply_memory:
-                    self._memory_store(dump_key, value)
-                return value
+
+        value = self._disk_get(hash_key, dump_key)
+        if not isinstance(value, (NoneType, ContainsWrap)):
+            if self.apply_memory:
+                self._memory_store(dump_key, value)
+            return value
 
         value = default
         if not isinstance(default, NoneType):
@@ -264,55 +275,73 @@ class PDict:
         raise KeyError(key)
 
     def keys(self):
-        if self.apply_disk:
-            self.flush()
-            for res in self._fetchmany('select key from DICT', 500):
-                for key, in res:
-                    yield key
-        else:
-            yield from self.memory.keys()
+        self.flush()
+        for res in self._fetchmany('select key from DICT', self.chunk_size):
+            for key, in res:
+                yield key
 
     def values(self):
-        if self.apply_disk:
-            self.flush()
-            for res in self._fetchmany('select value from DICT', 500):
-                for value, in res:
-                    yield pickle.loads(value)
-        else:
-            yield from self.memory.values()
+        self.flush()
+        for res in self._fetchmany('select value from DICT', self.chunk_size):
+            for value, in res:
+                yield pickle.loads(value)
 
     def items(self):
-        if self.apply_disk:
-            self.flush()
-            cursor = self.execute('select key, value from DICT')
-            res = cursor.fetchmany(500)
-            while len(res) > 0:
-                for key, value in res:
-                    yield key, pickle.loads(value)
-                res = cursor.fetchmany(500)
-        else:
-            return self.memory.items()
+        self.flush()
+        cursor = self.execute('select key, value from DICT')
+        res = cursor.fetchmany(self.chunk_size)
+        while len(res) > 0:
+            for key, value in res:
+                yield key, pickle.loads(value)
+            res = cursor.fetchmany(self.chunk_size)
 
     def update(self, E, **F):
         raise NotImplementedError()
 
     def clear(self):
-        if self.apply_disk:
-            self.conn.close()
-            os.remove(self.database)
+        """
+        Clear cache, memory bank, and remove the database file.
+        :return:
+        """
+        self._cache_len = None
+        self.cache.clear()
+        self.conn.close()
+        os.remove(self.database)
         if self.apply_memory:
             self.memory.clear()
             self.queue.clear()
 
-    def setdefault(self, k, value):
-        res = self.get(k, contrain)
+    def setdefault(self, k, default):
+        res = self.get(k, contain)
         if isinstance(res, ContainsWrap):
-            self[k] = value
-            return value
+            # Value will become default value if get method returns ContainWrap instance.
+            self[k] = default
+            res = default
         return res
 
     def to_list(self):
-        assert self.apply_disk
+        """
+
+        :return: a PList instance
+        """
         self.flush()
         plist = PList(self.database)
         return plist
+
+    def compress(self):
+        self.flush()
+        new_database = f"{self.database}.compress"
+
+        new_dic = PDict(new_database, apply_memory=False, cache_size=max(len(self) // 10, 500))
+
+        for key_chunk in self._fetchmany('select key from DICT group by key', chunksize=self.chunk_size):
+            key_chunk = [i[0] for i in key_chunk]
+            for k, v in zip(key_chunk, self.gets(*key_chunk)):
+                if isinstance(v, NoneType):
+                    continue
+                new_dic[k] = v
+        new_dic.flush()
+        self.clear()
+        new_dic.close()
+        import shutil
+        shutil.move(new_database, self.database)

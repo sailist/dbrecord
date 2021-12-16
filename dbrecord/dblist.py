@@ -1,7 +1,14 @@
 import pickle
 import sqlite3
-
 from .utils import construct_tuple, NoneWrap
+
+
+def window(seq, n: int, strid: int = 1, drop_last: bool = False):
+    for i in range(0, len(seq), strid):
+        res = seq[i:i + n]
+        if drop_last and len(res) < n:
+            break
+        yield res
 
 
 def de_nonewrap(value):
@@ -11,9 +18,15 @@ def de_nonewrap(value):
 
 
 class PList:
-    def __init__(self, db_file):
+    def __init__(self, db_file, chunk_size=500,
+                 multi_thread=False, num_workers=8):
         self._conn = None
         self.db_file = db_file
+        self.chunk_size = chunk_size
+
+        # TODO
+        self.multi_thread = multi_thread
+        self.num_workers = num_workers
 
     def __getstate__(self):
         """Connetion object cannot be pickled, so we need to return None when __getstate__ be called. """
@@ -21,6 +34,13 @@ class PList:
 
     def __getitem__(self, item):
         return self.gets(item, 'value')
+
+    def iter_by_type(self, return_type):
+        for ids in window(range(len(self)), self.chunk_size, self.chunk_size):
+            yield from self.gets(list(ids), return_type=return_type)
+
+    def __iter__(self):
+        yield from self.iter_by_type('value')
 
     def __len__(self):
         from dbrecord.summary import count_table
