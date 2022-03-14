@@ -16,6 +16,7 @@ create a pdict
 
 ```python
 from dbrecord import PDict
+
 dic = PDict('./disk.sqlite')
 for i in range(5000):
     dic[f'{i}'] = i
@@ -24,7 +25,7 @@ assert len(dic) == 5000
 dic2 = PDict('./disk.sqlite')
 assert len(dic2) == 5000
 
-res, missing = dic.gets([f'{i}' for i in range(5001)]) # type: dict, set
+res, missing = dic.gets([f'{i}' for i in range(5001)])  # type: dict, set
 assert len(missing) == 1
 print(missing)
 for i in range(5000):
@@ -32,6 +33,7 @@ for i in range(5000):
 ```
 
 ## PList
+
 ```python
 from dbrecord import PList
 
@@ -50,7 +52,6 @@ try:
     assert False
 except IndexError:
     pass
-
 
 for i, j in zip(lis, range(20)):
     assert i == j
@@ -79,3 +80,4 @@ python benchmark.py
 # Reference
 
 - https://gist.github.com/joseafga/ff798d340d79107ace14fd232abc4376
+- [sqlitedict](https://github.com/piskvorky/sqlitedict)
