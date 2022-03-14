@@ -9,9 +9,9 @@ def mark_in_database(database, tag):
     sql = f'''CREATE TABLE {tag} (ID INTEGER PRIMARY KEY  AUTOINCREMENT)'''
     try:
         conn.execute(sql)
-    except sqlite3.Error:
-        pass
-    return conn
+    except sqlite3.Error as e:
+        return e
+    return True
 
 
 def check_database_exists(database, table):
@@ -21,7 +21,7 @@ def check_database_exists(database, table):
         conn.execute(sql)
         conn.commit()
     except sqlite3.Error as e:
-        print(e)
+        # print(e)
         return False
     return True
 
@@ -37,8 +37,8 @@ def create_database(database: str):
                        CREATE INDEX type on DICT (INTHASH);'''
     try:
         conn.executescript(sql)
-    except Exception as e:
-        print(e)
+    except sqlite3.Error as e:
+        return e
     return conn
 
 
@@ -101,7 +101,3 @@ def fetchall(conn, sql):
     """
     cursor = conn.execute(sql)
     return cursor.fetchall()
-
-
-if __name__ == '__main__':
-    print(construct_tuple(1, 2, 3))
