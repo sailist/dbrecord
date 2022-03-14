@@ -71,7 +71,7 @@ see logs in [benchmark.md](./benchmark.log) or run
 git clone https://github.com/sailist/dbrecord
 cd dbrecord
 cd example
-python speed_test.py
+python benchmark.py
 ```
 
 # Reference
