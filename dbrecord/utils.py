@@ -37,9 +37,8 @@ def create_database(database: str):
                        CREATE INDEX type on DICT (INTHASH);'''
     try:
         conn.executescript(sql)
-    except sqlite3.Error as e:
-        return e
-    return conn
+    finally:
+        return conn
 
 
 def construct_tuple(*values):
