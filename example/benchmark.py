@@ -50,6 +50,8 @@ if __name__ == '__main__':
     save_and_load(test_size=5000, chunk=10)
     save_and_load(test_size=50000)
     save_and_load(test_size=50000, chunk=10)
+    save_and_load(test_size=50000, chunk=100)
+    save_and_load(test_size=50000, chunk=1000)
     # save_and_load(test_size=500000)
     # save_and_load(test_size=500000, chunk=10)
     # save_and_load(test_size=1000000)
