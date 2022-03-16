@@ -25,7 +25,6 @@ class SqliteInterface:
     def __init__(self,
                  database: str,
                  cache_size: int = 500, chunk_size: int = 1000,
-                 backend='pickle',
                  backend_dump=None,
                  backend_load=None,
                  **kwargs):
