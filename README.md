@@ -97,3 +97,4 @@ python benchmark.py
 
 - https://gist.github.com/joseafga/ff798d340d79107ace14fd232abc4376
 - [sqlitedict](https://github.com/piskvorky/sqlitedict)
+- [quickle](https://github.com/jcrist/quickle)
