@@ -12,7 +12,7 @@ pip install dist/$(python3 install.py) --user
 
 setup(
     name='dbrecord',
-    version='1.0',
+    version='1.1.0',
     description='sqlite based kv database using for big data IO.',
     url='https://github.com/pytorch-lumo/dbrecord',
     author='sailist',
