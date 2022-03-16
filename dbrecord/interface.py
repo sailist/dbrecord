@@ -1,9 +1,15 @@
 import os
+import sqlite3
+import warnings
+# try:
+#     import quickle as pickle
+# except:
+#     warnings.warn('')
 import pickle
 import time
-import warnings
+import threading
 from typing import (overload, Tuple, Union, List, Any, Dict, Set)
-
+from .serilize_backend import get_backend_dumps, get_backend_loads
 from .summary import count_table
 from .utils import create_database, inthash, NoneWrap, fetchall, construct_tuple, fetchmany, mark_in_database, \
     check_database_exists
@@ -18,7 +24,11 @@ class SqliteInterface:
     @overload
     def __init__(self,
                  database: str,
-                 cache_size: int = 500, chunk_size: int = 1000, **kwargs):
+                 cache_size: int = 500, chunk_size: int = 1000,
+                 backend='pickle',
+                 backend_dump=None,
+                 backend_load=None,
+                 **kwargs):
         ...
 
     def __init__(self, database, **kwargs):
@@ -28,6 +38,16 @@ class SqliteInterface:
         self._map_cache = {}
         self._index_cache = {}
         self._props = {}
+
+        self._props['tid'] = threading.currentThread().ident
+
+        self.loads_fn = kwargs.get('backend_load', 'pickle')
+        self.dumps_fn = kwargs.get('backend_dump', 'pickle')
+        if isinstance(self.loads_fn, str):
+            self.loads_fn = get_backend_loads(self.loads_fn)
+
+        if isinstance(self.dumps_fn, str):
+            self.dumps_fn = get_backend_dumps(self.dumps_fn)
 
         config = default_config.copy()
         config.update(kwargs)
@@ -58,7 +78,12 @@ class SqliteInterface:
     def __getstate__(self):
         state = self.__dict__.copy()
         state['_conn'] = None
+        print('state')
         return state
+
+    @property
+    def tid(self):
+        return self._props['tid']
 
     @property
     def is_list(self):
@@ -87,7 +112,7 @@ class SqliteInterface:
         return self._config['chunk_size']
 
     def _get_dump_value(self, value: Any):
-        dump_value = pickle.dumps(value)
+        dump_value = self.dumps_fn(value)
         return dump_value
 
     def _get_hash_key(self, key: str):
@@ -99,7 +124,7 @@ class SqliteInterface:
         return self._get_hash_key(key), key, self._get_dump_value(value)
 
     def deserilize(self, val):
-        val = pickle.loads(val)
+        val = self.loads_fn(val)
         if isinstance(val, NoneWrap):
             return None
         return val
@@ -137,8 +162,11 @@ class SqliteInterface:
     def flush(self):
         if len(self._map_cache) == 0:
             return
+
         sql = f'insert or IGNORE into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
-        self.conn.executemany(sql, self._map_cache.values())
+
+        print(os.getpid(), self.tid, threading.current_thread().ident)
+        self.conn.executemany(sql, list(self._map_cache.values()))
         self.conn.commit()
         self._map_cache.clear()
 
@@ -176,7 +204,7 @@ class SqliteInterface:
         res = fetchall(self.conn, sql)
 
         def _loads(val):
-            val = pickle.loads(val)
+            val = self.loads_fn(val)
             if isinstance(val, NoneWrap):
                 return None
             return val
@@ -195,7 +223,10 @@ class SqliteInterface:
 
     def reconnect(self):
         if self._conn is not None:
-            self._conn.close()
+            try:
+                self._conn.close()
+            except sqlite3.ProgrammingError:
+                pass
         self._conn = None
 
     def clear(self):
