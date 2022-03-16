@@ -69,8 +69,17 @@ except IndexError:
 # With other backend
 
 ```python
+dic = PDict('./temp.sqlite', cache_size=test_size // 2,
+            backend_dump='quickle',
+            backend_load='quickle')
+```
 
+```python
+import json
 
+dic = PDict('./temp.sqlite', cache_size=test_size // 2,
+            backend_dump=json.dumps,
+            backend_load=json.loads)
 ```
 
 # benchmark
