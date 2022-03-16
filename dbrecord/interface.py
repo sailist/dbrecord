@@ -38,8 +38,6 @@ class SqliteInterface:
         self._index_cache = {}
         self._props = {}
 
-        self._props['tid'] = threading.currentThread().ident
-
         self.loads_fn = kwargs.get('backend_load', 'pickle')
         self.dumps_fn = kwargs.get('backend_dump', 'pickle')
         if isinstance(self.loads_fn, str):
@@ -80,9 +78,6 @@ class SqliteInterface:
         print('state')
         return state
 
-    @property
-    def tid(self):
-        return self._props['tid']
 
     @property
     def is_list(self):
@@ -164,7 +159,6 @@ class SqliteInterface:
 
         sql = f'insert or IGNORE into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
 
-        print(os.getpid(), self.tid, threading.current_thread().ident)
         self.conn.executemany(sql, list(self._map_cache.values()))
         self.conn.commit()
         self._map_cache.clear()
