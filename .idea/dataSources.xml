@@ -38,7 +38,7 @@
       </libraries>
     </data-source>
     <data-source source="LOCAL" name="temp" uuid="5be4391a-ff02-44a5-bc65-d9f9a2e19894">
-      <driver-ref>sqlite.xerial</driver-ref>
+      <driver-ref>767d92b8-b93f-48de-ac3c-47b9ba09b0c0</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/example/temp.sqlite</jdbc-url>
@@ -59,7 +59,7 @@
       </libraries>
     </data-source>
     <data-source source="LOCAL" name="" uuid="34e116c4-395d-4ec3-96a0-21774ebc1f18">
-      <driver-ref>sqlite.xerial</driver-ref>
+      <driver-ref>767d92b8-b93f-48de-ac3c-47b9ba09b0c0</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/tests/.coverage</jdbc-url>
@@ -80,7 +80,7 @@
       </libraries>
     </data-source>
     <data-source source="LOCAL" name="[2]" uuid="a4ba55b6-bc58-4089-ae3e-bba7e44c19ee">
-      <driver-ref>sqlite.xerial</driver-ref>
+      <driver-ref>767d92b8-b93f-48de-ac3c-47b9ba09b0c0</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/.coverage</jdbc-url>
@@ -89,6 +89,24 @@
         <library>
           <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.34.0/sqlite-jdbc-3.34.0.jar</url>
         </library>
+        <library>
+          <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.25.1/sqlite-jdbc-3.25.1.jar</url>
+        </library>
+        <library>
+          <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.25.1/license.txt</url>
+        </library>
+        <library>
+          <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.25.1/sqlite-jdbc-3.25.1.jar</url>
+        </library>
+      </libraries>
+    </data-source>
+    <data-source source="LOCAL" name="disk" uuid="0ed3b6d8-3659-422f-b81f-e35ad45fe8f6">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/tests/disk.sqlite</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+      <libraries>
         <library>
           <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.25.1/sqlite-jdbc-3.25.1.jar</url>
         </library>
