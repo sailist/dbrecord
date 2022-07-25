@@ -78,7 +78,6 @@ class SqliteInterface:
         print('state')
         return state
 
-
     @property
     def is_list(self):
         if 'is_list' not in self._props:
@@ -157,7 +156,7 @@ class SqliteInterface:
         if len(self._map_cache) == 0:
             return
 
-        sql = f'insert or IGNORE into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
+        sql = f'insert or replace into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
 
         self.conn.executemany(sql, list(self._map_cache.values()))
         self.conn.commit()
