@@ -10,7 +10,7 @@ import time
 import threading
 from typing import (overload, Tuple, Union, List, Any, Dict, Set)
 from .serilize_backend import get_backend_dumps, get_backend_loads
-from .summary import count_table
+from .summary import count_table, count_table2
 from .utils import create_database, inthash, NoneWrap, fetchall, construct_tuple, fetchmany, mark_in_database, \
     check_database_exists
 
@@ -31,7 +31,6 @@ class SqliteInterface:
         ...
 
     def __init__(self, database, **kwargs):
-        super().__init__()
         self._database = database
         self._conn = None
         self._map_cache = {}
@@ -93,7 +92,7 @@ class SqliteInterface:
     @property
     def cached_len(self):
         if 'cached_len' not in self._props:
-            self._props['cached_len'] = count_table(self.conn, 'DICT')
+            self._props['cached_len'] = count_table2(self.conn, 'DICT')
         return self._props['cached_len']
 
     @property
@@ -156,7 +155,9 @@ class SqliteInterface:
         if len(self._map_cache) == 0:
             return
 
-        sql = f'insert or IGNORE into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
+        # sql = f'insert or ignore into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
+        # TODO this operation will delete old record and insert new one. So we should use count_tabl2 instead of count_table
+        sql = f'insert or replace into DICT (INTHASH, KEY, VALUE) values (?,?,?);'
 
         self.conn.executemany(sql, list(self._map_cache.values()))
         self.conn.commit()
