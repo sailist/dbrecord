@@ -78,7 +78,6 @@ class SqliteInterface:
         print('state')
         return state
 
-
     @property
     def is_list(self):
         if 'is_list' not in self._props:
@@ -142,7 +141,7 @@ class SqliteInterface:
             self._props.pop('is_dict')
 
     def disk_append(self, value):
-        key = f"{time.time_ns()}"
+        key = f"{time.time()}"
         self._map_cache[key] = self._get_dump_key_value_in_sql(key, value)
         self._check_flush()
         if not self.is_list:
